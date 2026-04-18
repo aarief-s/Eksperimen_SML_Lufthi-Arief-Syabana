@@ -1,0 +1,66 @@
+name: Automated Preprocessing - Lufthi Arief Syabana
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'smartphone_usage_raw.csv'
+      - 'preprocessing/automate_Lufthi-Arief-Syabana.py'
+
+  schedule:
+    - cron: '0 7 * * 1'
+
+jobs:
+  preprocessing:
+    name: Run Data Preprocessing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas==2.2.2 numpy==1.26.4 scikit-learn==1.5.1
+
+      - name: Verify Dataset Exists
+        run: |
+          echo "=== Cek ketersediaan dataset ==="
+          ls -lh smartphone_usage_raw.csv
+          echo "Dataset ditemukan, siap diproses."
+
+      - name: Run Preprocessing Script
+        run: |
+          cd preprocessing
+          python automate_Lufthi-Arief-Syabana.py \
+            --input ../smartphone_usage_raw.csv \
+            --output smartphone_usage_preprocessing
+
+      - name: Verify Output Files
+        run: |
+          echo "=== Hasil Preprocessing ==="
+          ls -lh preprocessing/smartphone_usage_preprocessing/
+          wc -l preprocessing/smartphone_usage_preprocessing/train.csv
+          wc -l preprocessing/smartphone_usage_preprocessing/test.csv
+
+      - name: Commit Preprocessed Dataset
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add preprocessing/smartphone_usage_preprocessing/
+          git diff --staged --quiet || git commit -m "ci: update preprocessed dataset [skip ci]"
+
+      - name: Push Changes
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
